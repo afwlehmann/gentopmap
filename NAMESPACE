@@ -1,0 +1,4 @@
+export(gtm.compute)
+export(gtm.project)
+importFrom(mixtools,rmvnorm)
+S3method(print,gtm)
