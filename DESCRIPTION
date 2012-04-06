@@ -9,5 +9,5 @@ Description: TODO
 License: LGPL-3
 Collate:
     'gtm.R'
-Depends:
+Imports:
     mixtools
