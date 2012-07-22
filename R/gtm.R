@@ -187,7 +187,7 @@ gtm.compute <- function(T, grid, sigma, K, epsilon=1e-5, maxIterations=100, call
 #' @param ... additional arguments to be passed on to a final print statement
 #' @seealso \code{\link{gtm.compute}}
 #' @method print gtm
-#' @export
+#' @export print.gtm
 print.gtm <- function(x, ...) {
   stopifnot(inherits(x, "gtm"))
   printSubset <- function(M, nx, ny) {

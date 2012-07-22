@@ -3,7 +3,7 @@
 \title{Compute a Generative Topographic Mapping for a high-dimensional dataset.}
 \usage{
   gtm.compute(T, grid, sigma, K, epsilon = 1e-05,
-  maxIterations = 100, callback = NULL, ...)
+    maxIterations = 100, callback = NULL, ...)
 }
 \arguments{
   \item{T}{a matrix whose rows contain the samples of the
