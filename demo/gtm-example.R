@@ -3,12 +3,16 @@
 # of the low dimensionality of the data-space.
 
 library(mygtm)
-library(mytools) # for computeNDimensionalGrid
+library(mixtools)
 
 T <- rbind(rmvnorm(n=100, mu=c(0,0,0), sigma=diag(c(1,1,1))),
            rmvnorm(n=100, mu=c(-10,-10,-10), sigma=diag(c(1,3,2))),
            rmvnorm(n=100, mu=c(7,23,0), sigma=diag(c(4,7,1))))
-grid <- computeNDimensionalGrid(2, 10^2)
+grid <- local({
+  .x <- seq(0, 2, length.out=10)
+  .y <- seq(0, 2, length.out=10)
+  as.matrix(expand.grid(.x, .y))
+})
 model <- gtm.compute(T, grid, sigma=1/40, K=nrow(grid)*100, epsilon=1e-5, 
                      maxIterations=10,
                      callback=function(iter,llh) {
