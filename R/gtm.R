@@ -131,11 +131,16 @@ gtm.compute <- function(T, grid, sigma, K, epsilon=1e-5, maxIterations=100, call
     Rin <- auxRin$Rin
     if (is.function(callback)) 
       callback(iter, auxRin$logLikelihood, ...)
-    lastLLH <- histLogLikelihood[length(histLogLikelihood)]
-    if (is.na(histLogLikelihood) || abs(lastLLH - auxRin$logLikelihood) > epsilon)
+    lastLLH <- tail(histLogLikelihood, 1)
+    if (is.na(histLogLikelihood))
+        histLogLikelihood <- auxRin$logLikelihood
+    else {
       histLogLikelihood <- c(histLogLikelihood, auxRin$logLikelihood)
-    else
-      break
+      # EM is guaranteed to converge, so the llh gets better at every iteration
+      # step.
+      if (lastLLH - auxRin$logLikelihood < log(epsilon))
+          break
+    }
 
     # Update W.
     #
