@@ -206,14 +206,6 @@ print.gtm <- function(x, ...) {
 #' @seealso \code{\link{gtm.computeResponsibilitiesAndLogLikelihood}}
 #' @export
 gtm.project <- function(X, Rin) {
-  K <- nrow(Rin)
   N <- ncol(Rin)
-  L <- ncol(X)
-  result <- matrix(nrow=N, ncol=L)
-  #for (n in 1:N)
-  #    for (i in 1:K)
-  #        result[n,] <- result[n,] + Rin[i,n] * X[i,]
-  for (n in 1:N)
-    result[n,] <- colSums(Rin[,n] * X)
-  result
+  t(sapply(1:N, function(n) colSums(Rin[,n] * X)))
 }
