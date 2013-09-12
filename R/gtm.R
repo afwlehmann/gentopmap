@@ -92,13 +92,9 @@ gtm.compute <- function(T, grid, sigma, K, epsilon=1e-5, maxIterations=100, call
   # Note that whereas in Bishop's paper the samples are stored in the columns
   # of X, here the samples are stored per row.
   numSamplesPerNode <- K / M
-  X <- matrix(nrow=K, ncol=L)
-  for (i in 1:nrow(grid)) {
-    startIndex <- (i-1)*numSamplesPerNode+1
-    endIndex <- i*numSamplesPerNode
-    X[startIndex:endIndex,] <-
-      rmvnorm(n=numSamplesPerNode, mu=grid[i,], sigma=diag(rep(sigma^2, L)))
-  }
+  X <- do.call(rbind, lapply(seq(nrow(grid)), function(i) {
+    rmvnorm(n=numSamplesPerNode, mu=grid[i,], sigma=diag(rep(sigma^2, L)))
+  }))
   
   # Compute Phi where Phi_ij is the probability of sample X[i,] to be drawn
   # from a Gaussian with mean grid[j,...] and variance sigma
