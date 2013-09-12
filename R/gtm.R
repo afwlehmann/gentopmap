@@ -98,13 +98,9 @@ gtm.compute <- function(T, grid, sigma, K, epsilon=1e-5, maxIterations=100, call
   
   # Compute Phi where Phi_ij is the probability of sample X[i,] to be drawn
   # from a Gaussian with mean grid[j,...] and variance sigma
-  Phi <- matrix(nrow=K, ncol=M)
-  #for (i in 1:K)
-  #    for (j in 1:M)
-  #        Phi[i,j] <- sum((X[i,] - grid[j,])^2)
-  for (j in 1:M)
-    Phi[,j] <- rowSums(sweep(X, 2, grid[j,], `-`)^2)
-  Phi <- 1/((2*pi*sigma^2)^(L/2)) * exp(-1/(2*sigma^2) * Phi)
+  tmp <- -(L/2) * (log(2) + log(pi) + 2*log(sigma))
+  Phi <- exp(tmp - 1/(2*sigma^2) *
+             sapply(seq(M), function(i) rowSums(sweep(X, 2, grid[i,], `-`)^2)))
 
   # Initialize W and beta by means of the least squares solution to
   # || W phi(x) - U x ||^2 where the columns of U are the principal
