@@ -22,28 +22,19 @@ gtm.computeResponsibilitiesAndLogLikelihood <- function(T, Y, beta) {
   D <- ncol(T)
   # Compute the responsibilities of every Gaussian centered at T[n,] for
   # sample Y[i,]
-  Rin <- matrix(0, nrow=K, ncol=N)
-  #for (i in 1:K)
-  #    for (n in 1:N)
-  #        Rin[i,n] <- sum((Y[i,] - T[n,])^2)
-  for (n in 1:N)
-    Rin[,n] <- rowSums(sweep(Y, 2, T[n,], `-`)^2)
-  Rin <- (beta / (2*pi))^(D/2) * exp(-beta/2 * Rin)
+  tmp <- ncol(T)/2 * (log(beta) - log(2*pi))
+  Rin <- exp(tmp + -beta/2 *
+             sapply(seq(N), function(n) rowSums(sweep(Y, 2, T[n,], `-`)^2)))
   # Compute the sums of each column as they are used for both the calculation
   # of the log-likelihood and normalization.
   auxSums <- colSums(Rin)
   # Compute the log-likelihood.
-  logLikelihood <- sum(log(auxSums / K))
-  # The normalize and be at peace.
-  for (n in 1:N) {
-    if (auxSums[n] > 0)
-      Rin[,n] <- Rin[,n] / auxSums[n]
-    else
-      Rin[,n] <- 0
-  }
-  res <- list(Rin=Rin, logLikelihood=logLikelihood)
-  class(res) <- "gtmResponsibilities"
-  res
+  logLikelihood <- sum(log(auxSums) - log(K))
+  # Done.
+  structure(
+      list(Rin=scale(Rin, center=F, scale=replace(auxSums, auxSums <= 0, 1)),
+           logLikelihood=logLikelihood),
+      class=c("gtmResponsibilities"))
 }
 
 
