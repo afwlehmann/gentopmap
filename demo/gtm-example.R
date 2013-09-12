@@ -9,11 +9,13 @@ T <- rbind(rmvnorm(n=100, mu=c(0,0,0), sigma=diag(c(1,1,1))),
            rmvnorm(n=100, mu=c(-10,-10,-10), sigma=diag(c(1,3,2))),
            rmvnorm(n=100, mu=c(7,23,0), sigma=diag(c(4,7,1))))
 grid <- local({
-  .x <- seq(0, 2, length.out=10)
-  .y <- seq(0, 2, length.out=10)
+  .x <- seq(0, 1, length.out=5)
+  .y <- seq(0, 1, length.out=5)
   as.matrix(expand.grid(.x, .y))
 })
-model <- gtm.compute(T, grid, sigma=1/40, K=nrow(grid)*100, epsilon=1e-5, 
+model <- gtm.compute(T, grid,
+                     sigma=1/40,
+                     K=nrow(grid)*100,
                      maxIterations=10,
                      callback=function(iter,llh) {
                        cat(sprintf("Cycle %d (%f)\n", iter, llh))
@@ -25,11 +27,11 @@ extY = range(P[,2])
 
 plot.new()
 par(mfrow=c(2,1),mar=c(2,2,0,0),xaxt="s",yaxt="s")
+# First plot
 plot(model$X[,1], model$X[,2], pch=".")
 grid()
-plot(P[1:100,1], P[1:100,2], pch="+", col="red", xlim=extX, ylim=extY)
-par(new=TRUE, xaxt="n", yaxt="n")
-plot(P[101:200,1], P[101:200,2], pch="o", col="green", xlim=extX, ylim=extY)
-par(new=TRUE, xaxt="n", yaxt="n")
-plot(P[201:300,1], P[201:300,2], pch="*", col="blue", xlim=extX, ylim=extY)
+# Second plot
+plot(P[1:100,], pch="+", col="red", xlim=extX, ylim=extY)
+points(P[101:200,], pch="o", col="green")
+points(P[201:300,], pch="*", col="blue")
 grid()
