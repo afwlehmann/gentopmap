@@ -109,12 +109,16 @@ gtm.compute <- function(T, grid, sigma, K, epsilon=1e-5, maxIterations=100, call
   # Alternatively, use D^{-1} U x instead of U x where D^{-1} is a diagonal
   # matrix whose diagonal elements are the reciprocals of the square roots
   # of the corresponding eigenvalues (thus scaling unit variance).
+  ##Tprime <- scale(T)
+  ##aux <- svd(Tprime)
+  ##W <- aux$v[,1:L] %*% t(X) %*% Phi %*% matrixInverse(t(Phi) %*% Phi)
+  ##stopifnot(nrow(W) == D && ncol(W) == M)
+  ##beta <- 1 / (aux$d[L+1]^2 / (nrow(T)-1))
   eV <- eigen(cov(T))
   U <- eV$vectors[,1:L] #%*% diag(sqrt(eV$values[1:L]))
-  # TODO: Should X be centered prior to the projection?
-  W <- U %*% t(X) %*% Phi %*% matrixInverse(t(Phi) %*% Phi)
+  W <- U %*% t(scale(X, scale=F)) %*% Phi %*% matrixInverse(t(Phi) %*% Phi)
   stopifnot(nrow(W) == D && ncol(W) == M)
-  beta <- eV$values[L+1] # Alternatively see paper p. 8
+  beta <- 1 / eV$values[L+1] # Alternatively see paper p. 8
   
   # Compute the projection of the samples from latent- into data space.
   Y <- computeY(W, Phi)
@@ -147,16 +151,9 @@ gtm.compute <- function(T, grid, sigma, K, epsilon=1e-5, maxIterations=100, call
     Y <- computeY(W, Phi)
     
     # Update beta accordingly.
-    acc <- 0.0
-    for (n in 1:N) {
-      dists <- rowSums(sweep(Y, 2, T[n,], `-`)^2)
-      weightedDists <- Rin[,n] * dists
-      acc <- acc + sum(weightedDists)
-    }
-    beta = N * D / acc
-    
-    # Clean up memory.
-    gc()
+    beta <- N * D / sum(sapply(1:N, function(n) {
+      rowSums(sweep(Y, 2, T[n,], `-`)^2) * Rin[,n]
+    }))
   }
   
   res <- list(X=X, Rin=Rin, histLogLikelihood=histLogLikelihood)
