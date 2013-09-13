@@ -99,7 +99,7 @@ computeGTM <- function(T, grid, sigma, K, epsilon=0.1, maxIterations=100, callba
     U <- tmp$v[,1:L]
     ev <- tmp$d^2 / (nrow(Tprime)-1)
     pseudoInverse <- qr.solve(qr(t(Phi) %*% Phi)) %*% t(Phi)
-    W <- t(pseudoInverse %*% X %*% t(U))
+    W <- pseudoInverse %*% X %*% t(U)
     beta <- 1 / ev[L+1]
     list(W=W, beta=beta)
   })
@@ -107,7 +107,7 @@ computeGTM <- function(T, grid, sigma, K, epsilon=0.1, maxIterations=100, callba
   beta <- aux$beta
   
   # Auxiliary method for the mapping from latent- into data-space.
-  computeY <- function(W, Phi) { Phi %*% t(W) }
+  computeY <- function(W, Phi) { Phi %*% W }
 
   # Compute the projection of the samples from latent- into data space.
   Y <- computeY(W, Phi)
@@ -128,7 +128,7 @@ computeGTM <- function(T, grid, sigma, K, epsilon=0.1, maxIterations=100, callba
     # Update W.
     PhiTGPhi <- t(Phi * rowSums(Rin)) %*% Phi # same as t(Phi) %*% G %*% Phi
     invPhiTGPhi <- qr.solve(qr(PhiTGPhi))
-    W <- t(invPhiTGPhi %*% t(Phi) %*% Rin %*% T)
+    W <- invPhiTGPhi %*% t(Phi) %*% Rin %*% T
     rm(PhiTGPhi)
     
     # Update the projection of the samples from latent- into data space (as
