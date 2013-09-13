@@ -61,7 +61,7 @@ gtm.computeResponsibilitiesAndLogLikelihood <- function(T, Y, beta) {
 #'      Neural Computation 10, No. 1, p. 215-234, 1998
 #' @importFrom mixtools rmvnorm
 #' @export
-gtm.compute <- function(T, grid, sigma, K, epsilon=1e-5, maxIterations=100, callback=NULL, ...) {
+gtm.compute <- function(T, grid, sigma, K, epsilon=0.1, maxIterations=100, callback=NULL, ...) {
   stopifnot(nrow(T) > 0)
   stopifnot(nrow(grid) > 0)
   stopifnot(sigma>0)
@@ -124,7 +124,7 @@ gtm.compute <- function(T, grid, sigma, K, epsilon=1e-5, maxIterations=100, call
   Y <- computeY(W, Phi)
   
   # Shoot.
-  histLogLikelihood <- NA
+  histLogLikelihood <- NULL
   for (iter in 1:maxIterations) {
     # Compute the responsibilities and the overall log-likelihood.
     auxRin <- gtm.computeResponsibilitiesAndLogLikelihood(T, Y, beta)
@@ -132,15 +132,9 @@ gtm.compute <- function(T, grid, sigma, K, epsilon=1e-5, maxIterations=100, call
     if (is.function(callback)) 
       callback(iter, auxRin$logLikelihood, ...)
     lastLLH <- tail(histLogLikelihood, 1)
-    if (is.na(histLogLikelihood))
-        histLogLikelihood <- auxRin$logLikelihood
-    else {
-      histLogLikelihood <- c(histLogLikelihood, auxRin$logLikelihood)
-      # EM is guaranteed to converge, so the llh gets better at every iteration
-      # step.
-      if (lastLLH - auxRin$logLikelihood < log(epsilon))
-          break
-    }
+    histLogLikelihood <- c(histLogLikelihood, auxRin$logLikelihood)
+    if (!is.null(lastLLH) && auxRin$logLikelihood - lastLLH < log(epsilon))
+        break
 
     # Update W.
     #

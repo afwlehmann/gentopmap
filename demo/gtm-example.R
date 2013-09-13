@@ -28,7 +28,7 @@ extY = range(P[,2])
 plot.new()
 par(mfrow=c(2,1),mar=c(2,2,0,0),xaxt="s",yaxt="s")
 # First plot
-plot(model$X[,1], model$X[,2], pch=".")
+plot(model$X, pch=".")
 grid()
 # Second plot
 plot(P[1:100,], pch="+", col="red", xlim=extX, ylim=extY)
