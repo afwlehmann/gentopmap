@@ -1,23 +1,22 @@
-\name{gtm.compute}
-\alias{gtm.compute}
+\name{computeGTM}
+\alias{computeGTM}
 \title{Compute a Generative Topographic Mapping for a high-dimensional dataset.}
 \usage{
-  gtm.compute(T, grid, sigma, K, epsilon = 1e-05,
+  computeGTM(T, grid, sigma, K, epsilon = 0.1,
     maxIterations = 100, callback = NULL, ...)
 }
 \arguments{
   \item{T}{a matrix whose rows contain the samples of the
   high-dimensional dataset}
 
-  \item{grid}{a (probably regular) two- or
-  three-dimensional grid in latent-space}
+  \item{grid}{a matrix whose rows correspond to the centers
+  of the basis functions (radially symmetric Gaussians),
+  typically layed out on a [0,1]x[0,1] grid}
 
-  \item{sigma}{the common standard deviation of the
-  radially symmetric Gaussians centered at the grid points
-  in latent-space}
+  \item{sigma}{the common standard deviation of the basis
+  functions}
 
-  \item{K}{the number of samples to be drawn from the
-  Gaussians in latent-space}
+  \item{K}{the number of latent-space samples}
 
   \item{epsilon}{the convergence criterion}
 
@@ -35,8 +34,8 @@
   a list consisting of \item{\code{X}}{a matrix whose rows
   contain the latent-space samples} \item{\code{Rin}}{the
   responsibilities (see
-  \code{\link{gtm.computeResponsibilitiesAndLogLikelihood}})}
-  \item{\code{histLogLikelihood}}{a vector containing the
+  \code{\link{computeResponsibilities}})}
+  \item{\code{histLLH}}{a vector containing the
   log-likelihood for each iteration}
 }
 \description{
@@ -48,6 +47,6 @@
   Mapping'', Neural Computation 10, No. 1, p. 215-234, 1998
 }
 \seealso{
-  \code{\link{gtm.computeResponsibilitiesAndLogLikelihood}}
+  \code{\link{computeResponsibilities}}
 }
 

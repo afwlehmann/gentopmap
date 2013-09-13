@@ -1,13 +1,12 @@
 Package: mygtm
 Type: Package
 Title: Implementation of the Generative Topographic Mapping
-Version: 0.3
-Date: 2013-09-12
+Version: 0.9
+Date: 2013-09-13
 Author: Alexander Lehmann <lehmanna@in.tum.de>
 Maintainer: Alexander Lehmann <lehmanna@in.tum.de>
 Description: TODO
 License: LGPL-3
 Collate:
     'gtm.R'
-Imports:
-    mixtools
+    'dataset-doc.R'

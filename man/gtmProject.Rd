@@ -1,15 +1,15 @@
-\name{gtm.project}
-\alias{gtm.project}
+\name{gtmProject}
+\alias{gtmProject}
 \title{Project latent-space samples using data-space responsibilities.}
 \usage{
-  gtm.project(X, Rin)
+  gtmProject(X, Rin)
 }
 \arguments{
   \item{X}{a matrix whose rows represent the latent-space
   samples}
 
   \item{Rin}{the responsibilities (see
-  \code{\link{gtm.computeResponsibilitiesAndLogLikelihood}})}
+  \code{\link{computeResponsibilities}})}
 }
 \value{
   a matrix whose rows represent the projection of the given
@@ -22,6 +22,6 @@
   sum_n R_in} for the \eqn{i}-th row of \eqn{X}.
 }
 \seealso{
-  \code{\link{gtm.computeResponsibilitiesAndLogLikelihood}}
+  \code{\link{computeResponsibilities}}
 }
 

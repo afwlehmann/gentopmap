@@ -1,8 +1,8 @@
-\name{gtm.computeResponsibilitiesAndLogLikelihood}
-\alias{gtm.computeResponsibilitiesAndLogLikelihood}
+\name{computeResponsibilities}
+\alias{computeResponsibilities}
 \title{Compute responsibilities and log-likelihood.}
 \usage{
-  gtm.computeResponsibilitiesAndLogLikelihood(T, Y, beta)
+  computeResponsibilities(T, Y, beta)
 }
 \arguments{
   \item{T}{a matrix whose rows contain the samples in

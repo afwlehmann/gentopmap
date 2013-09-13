@@ -16,24 +16,23 @@
 #'          \sum_n \log \left( \frac{1}{K} \sum_i p(t_n | x_i,
 #'          W, \beta) \right)}{% sum_n( log( 1/K * sum_i( p(t_n | x_i, W, beta) ) ) )
 #'      } where \eqn{K} is the number of samples in \eqn{Y}}
-gtm.computeResponsibilitiesAndLogLikelihood <- function(T, Y, beta) {
+computeResponsibilities <- function(T, Y, beta) {
   K <- nrow(Y)
   N <- nrow(T)
   D <- ncol(T)
   # Compute the responsibilities of every Gaussian centered at T[n,] for
   # sample Y[i,]
-  tmp <- ncol(T)/2 * (log(beta) - log(2*pi))
-  Rin <- exp(tmp + -beta/2 *
+  Rin <- exp(D/2 * (log(beta) - log(2*pi)) - beta/2 *
              sapply(seq(N), function(n) rowSums(sweep(Y, 2, T[n,], `-`)^2)))
   # Compute the sums of each column as they are used for both the calculation
   # of the log-likelihood and normalization.
   auxSums <- colSums(Rin)
   # Compute the log-likelihood.
-  logLikelihood <- sum(log(auxSums) - log(K))
+  llh <- sum(log(auxSums) - log(K))
   # Done.
   structure(
       list(Rin=scale(Rin, center=F, scale=replace(auxSums, auxSums <= 0, 1)),
-           logLikelihood=logLikelihood),
+           llh=llh),
       class=c("gtmResponsibilities"))
 }
 
@@ -41,10 +40,11 @@ gtm.computeResponsibilitiesAndLogLikelihood <- function(T, Y, beta) {
 #' Compute a Generative Topographic Mapping for a high-dimensional dataset.
 #'
 #' @param T a matrix whose rows contain the samples of the high-dimensional dataset
-#' @param grid a (probably regular) two- or three-dimensional grid in latent-space
-#' @param sigma the common standard deviation of the radially symmetric
-#'  Gaussians centered at the grid points in latent-space
-#' @param K the number of samples to be drawn from the Gaussians in latent-space
+#' @param grid a matrix whose rows correspond to the centers of the basis
+#'  functions (radially symmetric Gaussians), typically layed out on a
+#'  [0,1]x[0,1] grid
+#' @param sigma the common standard deviation of the basis functions
+#' @param K the number of latent-space samples
 #' @param epsilon the convergence criterion
 #' @param maxIterations the maximum number of iterations
 #' @param callback a \code{function(i, ll, ...} that is called once during
@@ -53,20 +53,20 @@ gtm.computeResponsibilitiesAndLogLikelihood <- function(T, Y, beta) {
 #' @param ... additional parameters passed on to the callback function
 #' @return a list consisting of
 #'  \item{\code{X}}{a matrix whose rows contain the latent-space samples}
-#'  \item{\code{Rin}}{the responsibilities (see \code{\link{gtm.computeResponsibilitiesAndLogLikelihood}})}
-#'  \item{\code{histLogLikelihood}}{a vector containing the log-likelihood for each iteration}
-#' @seealso \code{\link{gtm.computeResponsibilitiesAndLogLikelihood}}
+#'  \item{\code{Rin}}{the responsibilities (see \code{\link{computeResponsibilities}})}
+#'  \item{\code{histLLH}}{a vector containing the log-likelihood for each iteration}
+#' @seealso \code{\link{computeResponsibilities}}
 #' @references
 #'      Bishop et al., ``GTM: The Generative Topographic Mapping'',
 #'      Neural Computation 10, No. 1, p. 215-234, 1998
 #' @importFrom mixtools rmvnorm
 #' @export
-gtm.compute <- function(T, grid, sigma, K, epsilon=0.1, maxIterations=100, callback=NULL, ...) {
-  stopifnot(nrow(T) > 0)
-  stopifnot(nrow(grid) > 0)
-  stopifnot(sigma>0)
+computeGTM <- function(T, grid, sigma, K, epsilon=0.1, maxIterations=100, callback=NULL, ...) {
+  stopifnot(is.matrix(T) && nrow(T) > 0)
+  stopifnot(is.matrix(grid) && nrow(grid) > 0)
+  stopifnot(sigma > 0)
   stopifnot(K > 0)    
-  stopifnot(epsilon > 0)
+  stopifnot(epsilon >= 0 && epsilon < 1)
   stopifnot(maxIterations > 0)
 
   N <- nrow(T)       # number of points in data space
@@ -74,18 +74,6 @@ gtm.compute <- function(T, grid, sigma, K, epsilon=0.1, maxIterations=100, callb
   L <- ncol(grid)    # dimensionality of the latent space
   M <- nrow(grid)    # number of basis functions (Gaussians centered on the grid points)
   stopifnot(K %% M == 0)
-  
-  # Define an auxiliary function that computes the inverse of a given matrix
-  # by means of Cholesky decomposition.
-  matrixInverse <- function(X) {
-    tmp <- chol(X, pivot=TRUE)
-    oo <- order(attr(tmp, "pivot"))
-    chol2inv(tmp)[oo,oo]
-  }
-  
-  # Define another auxiliary function that computes the mapping of the samples
-  # from latent- into data-space.
-  computeY <- function(W, Phi) { Phi %*% t(W) }
   
   # Draw samples from latent-space.
   #
@@ -106,8 +94,7 @@ gtm.compute <- function(T, grid, sigma, K, epsilon=0.1, maxIterations=100, callb
   # || W phi(x) - U x ||^2
   # where the columns of U are the first L principal eigenvectors of T.
   aux <- local({
-    mu <- colMeans(T)
-    Tprime <- if (sum(mu) < 1e-15) T else sweep(T, 2, mu, `-`)
+    Tprime <- sweep(T, 2, colMeans(T), `-`)
     tmp <- svd(Tprime)
     U <- tmp$v[,1:L]
     ev <- tmp$d^2 / (nrow(Tprime)-1)
@@ -119,29 +106,29 @@ gtm.compute <- function(T, grid, sigma, K, epsilon=0.1, maxIterations=100, callb
   W <- aux$W
   beta <- aux$beta
   
+  # Auxiliary method for the mapping from latent- into data-space.
+  computeY <- function(W, Phi) { Phi %*% t(W) }
+
   # Compute the projection of the samples from latent- into data space.
   Y <- computeY(W, Phi)
   
   # Shoot.
-  histLogLikelihood <- NULL
+  histLLH <- NULL
   for (iter in 1:maxIterations) {
     # Compute the responsibilities and the overall log-likelihood.
-    auxRin <- gtm.computeResponsibilitiesAndLogLikelihood(T, Y, beta)
+    auxRin <- computeResponsibilities(T, Y, beta)
     Rin <- auxRin$Rin
     if (is.function(callback)) 
-      callback(iter, auxRin$logLikelihood, ...)
-    lastLLH <- tail(histLogLikelihood, 1)
-    histLogLikelihood <- c(histLogLikelihood, auxRin$logLikelihood)
-    if (!is.null(lastLLH) && auxRin$logLikelihood - lastLLH < log(epsilon))
+      callback(iter, auxRin$llh, ...)
+    lastLLH <- tail(histLLH, 1)
+    histLLH <- c(histLLH, auxRin$llh)
+    if (!is.null(lastLLH) && auxRin$llh - lastLLH < log(epsilon))
         break
 
     # Update W.
-    #
-    # Due to the way R handles element-wise multiplication of matrices and/or
-    # vectors, Phi^T G Phi equals Phi^T * diag(G) * Phi where diag(G) is the
-    # same as rowSums(Rin).
-    PhiTGPhi <- t(Phi * rowSums(Rin)) %*% Phi
-    W <- t(matrixInverse(PhiTGPhi) %*% t(Phi) %*% Rin %*% T)
+    PhiTGPhi <- t(Phi * rowSums(Rin)) %*% Phi # same as t(Phi) %*% G %*% Phi
+    invPhiTGPhi <- qr.solve(qr(PhiTGPhi))
+    W <- t(invPhiTGPhi %*% t(Phi) %*% Rin %*% T)
     rm(PhiTGPhi)
     
     # Update the projection of the samples from latent- into data space (as
@@ -153,10 +140,11 @@ gtm.compute <- function(T, grid, sigma, K, epsilon=0.1, maxIterations=100, callb
       rowSums(sweep(Y, 2, T[n,], `-`)^2) * Rin[,n]
     }))
   }
-  
-  res <- list(X=X, Rin=Rin, histLogLikelihood=histLogLikelihood)
-  class(res) <- "gtm"
-  res
+
+  structure(list(X=X,
+                 Rin=Rin,
+                 histLLH=histLLH),
+            class=c("gtm"))
 }
 
 
@@ -181,7 +169,7 @@ print.gtm <- function(x, ...) {
   printSubset(x$Rin, 3, 3)
   print("\n\n")
   print("Log-likelihood:\n")
-  printSubset(matrix(x$histLogLikelihood, byrow=T), 3, 1)
+  printSubset(matrix(x$histLLH, byrow=T), 3, 1)
   print(...)
 }
 
@@ -194,11 +182,11 @@ print.gtm <- function(x, ...) {
 #' for the \eqn{i}-th row of \eqn{X}.
 #' 
 #' @param X a matrix whose rows represent the latent-space samples
-#' @param Rin the responsibilities (see \code{\link{gtm.computeResponsibilitiesAndLogLikelihood}})
+#' @param Rin the responsibilities (see \code{\link{computeResponsibilities}})
 #' @return a matrix whose rows represent the projection of the given samples
-#' @seealso \code{\link{gtm.computeResponsibilitiesAndLogLikelihood}}
+#' @seealso \code{\link{computeResponsibilities}}
 #' @export
-gtm.project <- function(X, Rin) {
+gtmProject <- function(X, Rin) {
   N <- ncol(Rin)
   t(sapply(1:N, function(n) colSums(Rin[,n] * X)))
 }
