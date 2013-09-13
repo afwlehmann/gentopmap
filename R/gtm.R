@@ -9,13 +9,12 @@
 #'  Gaussians
 #' @return a list consisting of
 #'  \item{\code{Rin}}{the responsibility of the Gaussian centered at
-#'      \code{Y[i,]} for having generated \code{T[n,]}}
-#' 
-#'  \item{\code{logLikelikehood}}{the overall log-likelihood of all samples and
-#'      all Gaussians, i.e. \deqn{
-#'          \sum_n \log \left( \frac{1}{K} \sum_i p(t_n | x_i,
-#'          W, \beta) \right)}{% sum_n( log( 1/K * sum_i( p(t_n | x_i, W, beta) ) ) )
-#'      } where \eqn{K} is the number of samples in \eqn{Y}}
+#'    \code{Y[i,]} for having generated \code{T[n,]}}
+#'  \item{\code{llh}}{the log-likelihood of the model given the data, i.e.
+#'    \deqn{
+#'        \sum_n \log \left( \frac{1}{K} \sum_i p(t_n | x_i,
+#'        W, \beta) \right)}{% sum_n( log( 1/K * sum_i( p(t_n | x_i, W, beta) ) ) )
+#'    } where \eqn{K} is the number of samples in \eqn{Y}}
 computeResponsibilities <- function(T, Y, beta) {
   K <- nrow(Y)
   N <- nrow(T)
@@ -24,16 +23,12 @@ computeResponsibilities <- function(T, Y, beta) {
   # sample Y[i,]
   Rin <- exp(D/2 * (log(beta) - log(2*pi)) - beta/2 *
              sapply(seq(N), function(n) rowSums(sweep(Y, 2, T[n,], `-`)^2)))
-  # Compute the sums of each column as they are used for both the calculation
-  # of the log-likelihood and normalization.
+  # The sums of the columns are used for both the calculation of the
+  # log-likelihood as well as normalization.
   auxSums <- colSums(Rin)
-  # Compute the log-likelihood.
   llh <- sum(log(auxSums) - log(K))
-  # Done.
-  structure(
-      list(Rin=scale(Rin, center=F, scale=replace(auxSums, auxSums <= 0, 1)),
-           llh=llh),
-      class=c("gtmResponsibilities"))
+  list(Rin=scale(Rin, center=F, scale=replace(auxSums, auxSums <= 0, 1)),
+       llh=llh)
 }
 
 
@@ -129,13 +124,12 @@ computeGTM <- function(T, grid, sigma, K, epsilon=0.1, maxIterations=100, callba
     PhiTGPhi <- t(Phi * rowSums(Rin)) %*% Phi # same as t(Phi) %*% G %*% Phi
     invPhiTGPhi <- qr.solve(qr(PhiTGPhi))
     W <- invPhiTGPhi %*% t(Phi) %*% Rin %*% T
-    rm(PhiTGPhi)
+    # Clean up after ourselves.
+    rm(PhiTGPhi, invPhiTGPhi)
     
-    # Update the projection of the samples from latent- into data space (as
-    # a necessary impliciation of updating beta).
+    # Update the projection of the samples from latent- into data space before
+    # updating beta.
     Y <- computeY(W, Phi)
-    
-    # Update beta accordingly.
     beta <- N * D / sum(sapply(1:N, function(n) {
       rowSums(sweep(Y, 2, T[n,], `-`)^2) * Rin[,n]
     }))

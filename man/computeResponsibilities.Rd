@@ -17,14 +17,12 @@
 \value{
   a list consisting of \item{\code{Rin}}{the responsibility
   of the Gaussian centered at \code{Y[i,]} for having
-  generated \code{T[n,]}}
-
-  \item{\code{logLikelikehood}}{the overall log-likelihood
-  of all samples and all Gaussians, i.e. \deqn{ \sum_n \log
-  \left( \frac{1}{K} \sum_i p(t_n | x_i, W, \beta)
-  \right)}{% sum_n( log( 1/K * sum_i( p(t_n | x_i, W, beta)
-  ) ) ) } where \eqn{K} is the number of samples in
-  \eqn{Y}}
+  generated \code{T[n,]}} \item{\code{llh}}{the
+  log-likelihood of the model given the data, i.e.  \deqn{
+  \sum_n \log \left( \frac{1}{K} \sum_i p(t_n | x_i, W,
+  \beta) \right)}{% sum_n( log( 1/K * sum_i( p(t_n | x_i,
+  W, beta) ) ) ) } where \eqn{K} is the number of samples
+  in \eqn{Y}}
 }
 \description{
   For each sample t in T, calculate the reponsibility of
