@@ -102,23 +102,22 @@ gtm.compute <- function(T, grid, sigma, K, epsilon=0.1, maxIterations=100, callb
   Phi <- exp(tmp - 1/(2*sigma^2) *
              sapply(seq(M), function(i) rowSums(sweep(X, 2, grid[i,], `-`)^2)))
 
-  # Initialize W and beta by means of the least squares solution to
-  # || W phi(x) - U x ||^2 where the columns of U are the principal
-  # eigenvectors of T.
-  #
-  # Alternatively, use D^{-1} U x instead of U x where D^{-1} is a diagonal
-  # matrix whose diagonal elements are the reciprocals of the square roots
-  # of the corresponding eigenvalues (thus scaling unit variance).
-  ##Tprime <- scale(T)
-  ##aux <- svd(Tprime)
-  ##W <- aux$v[,1:L] %*% t(X) %*% Phi %*% matrixInverse(t(Phi) %*% Phi)
-  ##stopifnot(nrow(W) == D && ncol(W) == M)
-  ##beta <- 1 / (aux$d[L+1]^2 / (nrow(T)-1))
-  eV <- eigen(cov(T))
-  U <- eV$vectors[,1:L] #%*% diag(sqrt(eV$values[1:L]))
-  W <- U %*% t(scale(X, scale=F)) %*% Phi %*% matrixInverse(t(Phi) %*% Phi)
-  stopifnot(nrow(W) == D && ncol(W) == M)
-  beta <- 1 / eV$values[L+1] # Alternatively see paper p. 8
+  # Initialize W and beta with the least squares solution of
+  # || W phi(x) - U x ||^2
+  # where the columns of U are the first L principal eigenvectors of T.
+  aux <- local({
+    mu <- colMeans(T)
+    Tprime <- if (sum(mu) < 1e-15) T else sweep(T, 2, mu, `-`)
+    tmp <- svd(Tprime)
+    U <- tmp$v[,1:L]
+    ev <- tmp$d^2 / (nrow(Tprime)-1)
+    pseudoInverse <- qr.solve(qr(t(Phi) %*% Phi)) %*% t(Phi)
+    W <- t(pseudoInverse %*% X %*% t(U))
+    beta <- 1 / ev[L+1]
+    list(W=W, beta=beta)
+  })
+  W <- aux$W
+  beta <- aux$beta
   
   # Compute the projection of the samples from latent- into data space.
   Y <- computeY(W, Phi)
