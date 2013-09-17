@@ -19,8 +19,7 @@ computeResponsibilities <- function(T, Y, beta) {
   K <- nrow(Y)
   N <- nrow(T)
   D <- ncol(T)
-  # Compute the responsibilities of every Gaussian centered at T[n,] for
-  # sample Y[i,]
+  # Compute the responsibilities of every Gaussian centered at Y[i,] for T[n,]
   Rin <- exp(D/2 * (log(beta) - log(2*pi)) - beta/2 *
              sapply(seq(N), function(n) rowSums(sweep(Y, 2, T[n,], `-`)^2)))
   # The sums of the columns are used for both the calculation of the
@@ -35,55 +34,54 @@ computeResponsibilities <- function(T, Y, beta) {
 #' Compute a Generative Topographic Mapping for a high-dimensional dataset.
 #'
 #' @param T a matrix whose rows contain the samples of the high-dimensional dataset
-#' @param grid a matrix whose rows correspond to the centers of the basis
-#'  functions (radially symmetric Gaussians), typically layed out on a
-#'  [0,1]x[0,1] grid
+#' @param grid a vector specifying the number of points per axis along a grid in
+#'  latent-space, e.g. \code{c(100, 100)}
+#' @param M the number of basis functions
 #' @param sigma the common standard deviation of the basis functions
-#' @param K the number of latent-space samples
 #' @param epsilon the convergence criterion
 #' @param maxIterations the maximum number of iterations
-#' @param callback a \code{function(i, ll, ...} that is called once during
-#'  iteration with the current iteration number \code{i} and log-likelihood
-#'  \code{ll}, as well as any given \code{...}
-#' @param ... additional parameters passed on to the callback function
-#' @return a list consisting of
+#' @param verb \code{TRUE} for verbose output, else \code{FALSE}
+#' @return a list, as instance of \code{gtm}, consisting of
 #'  \item{\code{X}}{a matrix whose rows contain the latent-space samples}
 #'  \item{\code{Rin}}{the responsibilities (see \code{\link{computeResponsibilities}})}
+#'  \item{\code{mu}}{the centers of the basis functions in latent-space}
+#'  \item{\code{sigma}}{the common standard deviation of the basis functions}
+#'  \item{\code{beta}}{the common inverse variance of the radially symmetric
+#'    Gaussians in data-space}
+#'  \item{\code{W}}{a mapping from latent- into data-space}
 #'  \item{\code{histLLH}}{a vector containing the log-likelihood for each iteration}
 #' @seealso \code{\link{computeResponsibilities}}
 #' @references
 #'      Bishop et al., ``GTM: The Generative Topographic Mapping'',
 #'      Neural Computation 10, No. 1, p. 215-234, 1998
-#' @importFrom mixtools rmvnorm
 #' @export
-computeGTM <- function(T, grid, sigma, K, epsilon=0.1, maxIterations=100, callback=NULL, ...) {
+computeGTM <- function(T, grid, M, sigma, epsilon=0.1, maxIterations=50, verb=FALSE) {
   stopifnot(is.matrix(T) && nrow(T) > 0)
-  stopifnot(is.matrix(grid) && nrow(grid) > 0)
-  stopifnot(sigma > 0)
-  stopifnot(K > 0)    
-  stopifnot(epsilon >= 0 && epsilon < 1)
-  stopifnot(maxIterations > 0)
+  stopifnot(is.vector(grid) && length(grid) > 0 && all(grid > 0))
+  stopifnot(0 < M)
+  stopifnot(0 < sigma)
+  stopifnot(0 <= epsilon && epsilon < 1)
+  stopifnot(0 < maxIterations)
 
   N <- nrow(T)       # number of points in data space
   D <- ncol(T)       # dimensionality of the data space
-  L <- ncol(grid)    # dimensionality of the latent space
-  M <- nrow(grid)    # number of basis functions (Gaussians centered on the grid points)
-  stopifnot(K %% M == 0)
-  
-  # Draw samples from latent-space.
-  #
-  # Note that whereas in Bishop's paper the samples are stored in the columns
-  # of X, here the samples are stored per row.
-  numSamplesPerNode <- K / M
-  X <- do.call(rbind, lapply(seq(nrow(grid)), function(i) {
-    rmvnorm(n=numSamplesPerNode, mu=grid[i,], sigma=diag(rep(sigma^2, L)))
-  }))
+  L <- length(grid)  # dimensionality of the latent space
+
+  # Compute the grid in latent-space.
+  X <- as.matrix(do.call(expand.grid, lapply(grid, function(n) seq(-1, 1, length.out=n))))
+
+  # Determine the centers of the basis functions.
+  mu <- local({
+    tmp <- rep(floor(M^(1/L)), L-1)
+    numBFPerDim <- c(tmp, prod(tmp) %% M)
+    as.matrix(do.call(expand.grid, lapply(numBFPerDim, function(n) seq(-1, 1, length.out=n))))
+  })
   
   # Compute Phi where Phi_ij is the probability of sample X[i,] to be drawn
-  # from a Gaussian with mean grid[j,...] and variance sigma
+  # from a Gaussian with mean mu[j,...] and variance sigma
   tmp <- -(L/2) * (log(2) + log(pi) + 2*log(sigma))
   Phi <- exp(tmp - 1/(2*sigma^2) *
-             sapply(seq(M), function(i) rowSums(sweep(X, 2, grid[i,], `-`)^2)))
+             sapply(seq(M), function(i) rowSums(sweep(X, 2, mu[i,], `-`)^2)))
 
   # Initialize W and beta with the least squares solution of
   # || W phi(x) - U x ||^2
@@ -100,6 +98,7 @@ computeGTM <- function(T, grid, sigma, K, epsilon=0.1, maxIterations=100, callba
   })
   W <- aux$W
   beta <- aux$beta
+  rm(aux)
   
   # Auxiliary method for the mapping from latent- into data-space.
   computeY <- function(W, Phi) { Phi %*% W }
@@ -113,8 +112,11 @@ computeGTM <- function(T, grid, sigma, K, epsilon=0.1, maxIterations=100, callba
     # Compute the responsibilities and the overall log-likelihood.
     auxRin <- computeResponsibilities(T, Y, beta)
     Rin <- auxRin$Rin
-    if (is.function(callback)) 
-      callback(iter, auxRin$llh, ...)
+
+    if (verb)
+        cat(sprintf("%.18e\n", auxRin$llh))
+
+    # See if we have already converged.
     lastLLH <- tail(histLLH, 1)
     histLLH <- c(histLLH, auxRin$llh)
     if (!is.null(lastLLH) && auxRin$llh - lastLLH < log(epsilon))
@@ -127,16 +129,21 @@ computeGTM <- function(T, grid, sigma, K, epsilon=0.1, maxIterations=100, callba
     # Clean up after ourselves.
     rm(PhiTGPhi, invPhiTGPhi)
     
-    # Update the projection of the samples from latent- into data space before
-    # updating beta.
+    # Update the mapping's parameter set before updating beta.
     Y <- computeY(W, Phi)
     beta <- N * D / sum(sapply(1:N, function(n) {
       rowSums(sweep(Y, 2, T[n,], `-`)^2) * Rin[,n]
     }))
   }
+  if (length(histLLH) < 2 || diff(tail(histLLH, 2)) >= log(epsilon))
+      warning("GTM did not converge.")
 
   structure(list(X=X,
                  Rin=Rin,
+                 mu=mu,
+                 sigma=sigma,
+                 beta=beta,
+                 W=W,
                  histLLH=histLLH),
             class=c("gtm"))
 }
@@ -168,19 +175,27 @@ print.gtm <- function(x, ...) {
 }
 
 
-#' Project latent-space samples using data-space responsibilities.
-#'
-#' The given latent-space samples \eqn{X} are weighted by the
-#' data-space responsibilties, i.e.
-#' \deqn{x_{\mathit{proj}_i} = \sum_n R_{in}}{x_proj_i = sum_n R_in}
-#' for the \eqn{i}-th row of \eqn{X}.
-#' 
-#' @param X a matrix whose rows represent the latent-space samples
-#' @param Rin the responsibilities (see \code{\link{computeResponsibilities}})
-#' @return a matrix whose rows represent the projection of the given samples
+#' Posterior-mean projection of the samples used for training the given GTM.
+#' @param model an instance of \code{gtm}
+#' @return a LxN matrix whose rows represent the projection of the N samples
+#'   into the L-dimensional latent-space
 #' @seealso \code{\link{computeResponsibilities}}
 #' @export
-gtmProject <- function(X, Rin) {
-  N <- ncol(Rin)
-  t(sapply(1:N, function(n) colSums(Rin[,n] * X)))
+gtmPosteriorMean <- function(model) {
+  stopifnot(inherits(model, "gtm"))
+  N <- ncol(model$Rin)
+  t(sapply(1:N, function(n) colSums(model$Rin[,n] * model$X)))
+}
+
+
+#' Posterior-mode projection of the samples used for training the given GTM.
+#' @param model an instance of \code{gtm}
+#' @return a LxN matrix whose rows represent the projection of the N samples
+#'   into the L-dimensional latent-space
+#' @seealso \code{\link{computeResponsibilities}}
+#' @export
+gtmPosteriorMode <- function(model) {
+  stopifnot(inherits(model, "gtm"))
+  N <- ncol(model$Rin)
+  t(sapply(1:N, function(n) model$X[which.max(model$Rin[,n]),]))
 }

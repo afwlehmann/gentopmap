@@ -1,0 +1,21 @@
+\name{gtmPosteriorMode}
+\alias{gtmPosteriorMode}
+\title{Posterior-mode projection of the samples used for training the given GTM.}
+\usage{
+  gtmPosteriorMode(model)
+}
+\arguments{
+  \item{model}{an instance of \code{gtm}}
+}
+\value{
+  a LxN matrix whose rows represent the projection of the N
+  samples into the L-dimensional latent-space
+}
+\description{
+  Posterior-mode projection of the samples used for
+  training the given GTM.
+}
+\seealso{
+  \code{\link{computeResponsibilities}}
+}
+

@@ -11,19 +11,17 @@ grid <- {
 T <- scale(as.matrix(subset(oilflow, select=-c(label))))
 stopifnot(ncol(T) == 12)
 model <- computeGTM(T,
-                    grid = grid,
-                    sigma = 1/10,
-                    K = nrow(grid)*100,
+                    grid = c(100,100),
+                    M = 16,
+                    sigma = 1/4,
                     maxIter = 15,
-                    callback=function(iter,llh) {
-                      cat(sprintf("Cycle %d (%f)\n", iter, llh))
-                    })
+                    verb=T)
 
 plot.new()
-par(mfrow=c(2,1),mar=c(2,2,0,0)+0.1,xaxt="s",yaxt="s")
+par(mfrow=c(2,1),mar=c(2,2,2,0.2),xaxt="s",yaxt="s")
 # First plot
-plot(model$X, pch=".")
-grid()
+P <- gtmPosteriorMean(model)
+plot(P, pch='+', col=oilflow$label, main="Posterior Mean")
 # Second plot
-P <- gtmProject(model$X, model$Rin)
-plot(P, pch='+', col=oilflow$label)
+P <- gtmPosteriorMode(model)
+plot(P, pch='+', col=oilflow$label, main="Posterior Mode")

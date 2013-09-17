@@ -1,4 +1,4 @@
 export(computeGTM)
-export(gtmProject)
+export(gtmPosteriorMean)
+export(gtmPosteriorMode)
 export(print.gtm)
-importFrom(mixtools,rmvnorm)
