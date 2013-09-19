@@ -2,16 +2,11 @@ library(mygtm)
 
 # Load the `oilflow` dataset.
 data(oilflow)
-
-grid <- {
-  tmp <- seq(0, 1, length.out=5)
-  as.matrix(expand.grid(tmp, tmp))
-}
-
 T <- scale(as.matrix(subset(oilflow, select=-c(label))))
 stopifnot(ncol(T) == 12)
+
 model <- computeGTM(T,
-                    grid = c(100,100),
+                    grid = c(50,50),
                     M = 16,
                     sigma = 1/4,
                     maxIter = 15,
