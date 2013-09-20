@@ -20,8 +20,16 @@ computeResponsibilities <- function(T, Y, beta) {
   N <- nrow(T)
   D <- ncol(T)
   # Compute the responsibilities of every Gaussian centered at Y[i,] for T[n,]
-  Rin <- exp(D/2 * (log(beta) - log(2*pi)) - beta/2 *
-             sapply(seq(N), function(n) rowSums(sweep(Y, 2, T[n,], `-`)^2)))
+  #Rin <- exp(D/2 * (log(beta) - log(2*pi)) - beta/2 *
+  #           sapply(seq(N), function(n) rowSums(sweep(Y, 2, T[n,], `-`)^2)))
+  # Subtracting the mean vector by using matrix multiplication is way faster than
+  # by using `sweep` or the like.
+  Rin <- local({
+    .Y <- cbind(Y, -1)
+    .I <- diag(D)
+    exp(D/2 * (log(beta) - log(2*pi)) - beta/2 *
+        sapply(1:N, function(n) rowSums((.Y %*% rbind(.I, T[n,]))^2)))
+  })
   # The sums of the columns are used for both the calculation of the
   # log-likelihood as well as normalization.
   auxSums <- colSums(Rin)
