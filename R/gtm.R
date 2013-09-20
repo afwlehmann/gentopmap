@@ -71,6 +71,8 @@ computeGTM <- function(T, grid, M, sigma, epsilon=0.1, maxIterations=50, verb=FA
   stopifnot(0 <= epsilon && epsilon < 1)
   stopifnot(0 < maxIterations)
 
+  T <- cbind(T, 1)   # bias
+  
   N <- nrow(T)       # number of points in data space
   D <- ncol(T)       # dimensionality of the data space
   L <- length(grid)  # dimensionality of the latent space
