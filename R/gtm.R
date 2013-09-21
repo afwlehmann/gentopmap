@@ -84,7 +84,11 @@ computeGTM <- function(T, grid, M, sigma, epsilon=0.1, maxIterations=50, verb=FA
   mu <- local({
     tmp <- rep(floor(M^(1/L)), L-1)
     numBFPerDim <- c(tmp, prod(tmp) %% M)
-    as.matrix(do.call(expand.grid, lapply(numBFPerDim, function(n) seq(-1, 1, length.out=n))))
+    .r <- range(X)
+    as.matrix(do.call(expand.grid, lapply(numBFPerDim, function(n) {
+      delta <- diff(.r) / (n+1)
+      seq(.r[1] + delta, .r[2] - delta, length.out=n)
+    })))
   })
   
   # Compute Phi where Phi_ij is the probability of sample X[i,] to be drawn
@@ -141,9 +145,13 @@ computeGTM <- function(T, grid, M, sigma, epsilon=0.1, maxIterations=50, verb=FA
     
     # Update the mapping's parameter set before updating beta.
     Y <- computeY(W, Phi)
-    beta <- N * D / sum(sapply(1:N, function(n) {
-      rowSums(sweep(Y, 2, T[n,], `-`)^2) * Rin[,n]
-    }))
+    beta <- local({
+      .Y <- cbind(Y, -1)
+      .I <- diag(D)
+      N * D / sum(sapply(1:N, function(n) {
+        rowSums((.Y %*% rbind(.I, T[n,]))^2)
+      }) * Rin)
+    })
   }
   if (length(histLLH) < 2 || diff(tail(histLLH, 2)) >= log(epsilon))
       warning("GTM did not converge.")
