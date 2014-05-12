@@ -3,4 +3,3 @@
 export(computeGTM)
 export(gtmPosteriorMean)
 export(gtmPosteriorMode)
-export(print.gtm)

@@ -27,15 +27,15 @@ computeResponsibilities <- function(T, Y, beta) {
   Rin <- local({
     .Y <- cbind(Y, -1)
     .I <- diag(D)
-    exp(D/2 * (log(beta) - log(2*pi)) - beta/2 *
-        sapply(1:N, function(n) rowSums((.Y %*% rbind(.I, T[n,]))^2)))
+    exp((D/2 * (log(beta) - log(2*pi)) - beta/2) *
+        apply(T, 1, function(t) rowSums((.Y %*% rbind(.I, t))^2)))
   })
   # The sums of the columns are used for both the calculation of the
   # log-likelihood as well as normalization.
   auxSums <- colSums(Rin)
   llh <- sum(log(auxSums) - log(K))
-  list(Rin=scale(Rin, center=F, scale=replace(auxSums, auxSums <= 0, 1)),
-       llh=llh)
+  list(Rin = scale(Rin, center=F, scale=replace(auxSums, auxSums <= 0, 1)),
+       llh = llh)
 }
 
 
@@ -164,32 +164,6 @@ computeGTM <- function(T, grid, M, sigma, epsilon=0.1, maxIterations=50, verb=FA
                  W=W,
                  histLLH=histLLH),
             class=c("gtm"))
-}
-
-
-#' Formatted output of a given Generative Topographic Mapping.
-#' @param x an instance of \code{gtm} (see \code{\link{gtm.compute}})
-#' @param ... additional arguments to be passed on to a final print statement
-#' @seealso \code{\link{gtm.compute}}
-#' @method print gtm
-#' @export print.gtm
-print.gtm <- function(x, ...) {
-  stopifnot(inherits(x, "gtm"))
-  printSubset <- function(M, nx, ny) {
-    fOut <- function(...) sprintf(paste(rep("%.6e", nx)), ...)
-    for (i in 1:ny)
-      print(paste(fOut(x$X[i,1:nx]), "...\n"))
-  }
-  print("Generative Topographic Mapping\n\n")
-  print("Latent-space samples:\n")
-  printSubset(x$X, 3, 3)
-  print("\n\n")
-  print("Responsibilities:\n")
-  printSubset(x$Rin, 3, 3)
-  print("\n\n")
-  print("Log-likelihood:\n")
-  printSubset(matrix(x$histLLH, byrow=T), 3, 1)
-  print(...)
 }
 
 
