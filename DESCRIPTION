@@ -7,6 +7,3 @@ Author: Alexander Lehmann <lehmanna@in.tum.de>
 Maintainer: Alexander Lehmann <lehmanna@in.tum.de>
 Description: TODO
 License: LGPL-3
-Collate:
-    'gtm.R'
-    'dataset-doc.R'
