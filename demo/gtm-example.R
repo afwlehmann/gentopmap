@@ -1,3 +1,23 @@
+#
+# gtm-example.R
+# copyright (c) by Alexander Lehmann <afwlehmann@googlemail.com>
+#
+# This file is part of mygtm.
+#
+# mygtm is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# mygtm is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with mygtm.  If not, see <http://www.gnu.org/licenses/>.
+
+
 library(mygtm)
 
 # Load the `oilflow` dataset.
@@ -24,3 +44,4 @@ plot(P, pch='+', col=oilflow$label, main="Posterior Mode")
 aux <- svd(T)
 P <- T %*% aux$v[,1:2]
 plot(P, pch='+', col=oilflow$label, main="PCA")
+
