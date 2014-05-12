@@ -17,13 +17,10 @@
 #'    } where \eqn{K} is the number of samples in \eqn{Y}}
 computeResponsibilities <- function(T, Y, beta) {
   K <- nrow(Y)
-  N <- nrow(T)
   D <- ncol(T)
-  # Compute the responsibilities of every Gaussian centered at Y[i,] for T[n,]
-  #Rin <- exp(D/2 * (log(beta) - log(2*pi)) - beta/2 *
-  #           sapply(seq(N), function(n) rowSums(sweep(Y, 2, T[n,], `-`)^2)))
-  # Subtracting the mean vector by using matrix multiplication is way faster than
-  # by using `sweep` or the like.
+  # Compute the responsibilities of every Gaussian centered at Y[i,] for T[n,].
+  # Note that subtracting the mean vector by using matrix multiplication is way
+  # faster than by using `sweep` or the like.
   Rin <- local({
     .Y <- cbind(Y, -1)
     .I <- diag(D)
